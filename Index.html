@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Random Data Generator</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.1/xlsx.full.min.js"></script>
+    <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Random Data Generator</h1>
+        <b><p id="DateTime"></p></b>
+
+        <!-- Logout Button -->
+        <button id="logoutButton" class="logout-btn">
+            <i class="fa fa-sign-out-alt"></i> Logout
+        </button>
+
+        <!-- Username and Password Change Form -->
+        <div class="form-container" id="changeCredentialsContainer">
+            <h2>Change Username & Password</h2>
+            <div class="form-group">
+                <label for="newUsername">New Username:</label>
+                <input type="text" id="newUsername" placeholder="Enter new username">
+            </div>
+            <div class="form-group">
+                <label for="newPassword">New Password:</label>
+                <input type="password" id="newPassword" placeholder="Enter new password">
+            </div>
+            <button id="changeCredentialsButton">
+                <i class="fa fa-key"></i> Change Username & Password
+            </button>
+            <p id="changeStatusMessage"></p>
+        </div>
+
+<!-- Search and Job Selection -->
+<div class="search-container">
+    <input type="text" id="searchBar" placeholder="Search Job Name..." oninput="filterJobs()">
+    <button id="searchButton" onclick="searchJobs()">Search</button>
+</div>
+<div class="job-selection">
+    <label for="jobSelect">Select a Job:</label>
+    <select id="jobSelect">
+        <option value="">Select Job</option>
+        <option value="Job1">Job1</option>
+        <option value="Job2">Job2</option>
+        <option value="Job3">Job3</option>
+    </select>
+</div>
+
+
+                <div class="form-group">
+                    <label for="quantity">Quantity:</label>
+                    <input type="number" id="quantity" placeholder="Enter quantity">
+                </div>
+                <div class="form-group">
+                    <label for="dataType">Data Type:</label>
+                    <select id="dataType">
+                        <option value="digits">Digits</option>
+                        <option value="string">String</option>
+                        <option value="alphanumeric">Alphanumeric</option>
+                        <option value="link">Link</option>
+                        <option value="customPattern">Custom Pattern</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="digitLength">Digit Length:</label>
+                    <input type="number" id="digitLength" placeholder="Default: 6">
+                </div>
+                <div class="form-group">
+                    <label for="customPattern">Custom Pattern:</label>
+                    <input type="text" id="customPattern" placeholder="e.g., AA123XX">
+                </div>
+                <div class="form-group">
+                    <label for="linkInput">Enter Link:</label>
+                    <input type="text" id="linkInput" placeholder="e.g., https://example.com/">
+                </div>
+
+                <!-- Buttons aligned horizontally -->
+                <div class="button-group">
+                    <button id="generateButton">
+                        <i class="fa fa-sync-alt"></i> Generate
+                    </button>
+                    <button id="clearButton">
+                        <i class="fa fa-eraser"></i> Clear
+                    </button>
+                    <button id="emailButton">
+                        <i class="fa fa-envelope"></i> Send to Email
+                    </button>
+                    <button id="downloadButton" disabled>
+                        <i class="fa fa-download"></i> Download Data (Excel)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right side: Generated Data -->
+            <div class="right-side-content">
+                <p id="processingMessage" class="hidden">Processing... Please wait.</p>
+
+                <!-- Table to display generated data -->
+                <div class="data-container ">
+                    <table id="recordTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Job Name</th>
+                                <th>Generated Data</th>
+                                <th>Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <div class="scroll-container">
+                        <textarea id="history" placeholder="Generated data history..." readonly></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message after generation -->
+    <p id="completionMessage" class="hidden">Complete data generated!</p>
+
+    <script>
+        // Check if user is logged in, otherwise redirect to login page
+        if (!sessionStorage.getItem('loggedIn')) {
+            window.location.href = "login.html";
+        }
+
+        // Logout functionality
+        document.getElementById('logoutButton').addEventListener('click', function() {
+            sessionStorage.removeItem('loggedIn');
+            window.location.href = "login.html"; // Redirect to login page after logging out
+        });
+
+        // Display current date and time
+        const currentDateTime = new Date().toLocaleString();
+        document.getElementById("DateTime").innerText = ` Date & Time: ${currentDateTime}`;
+
+        // Handle change of username and password
+        document.getElementById('changeCredentialsButton').addEventListener('click', function() {
+            const newUsername = document.getElementById('newUsername').value;
+            const newPassword = document.getElementById('newPassword').value;
+
+            if (newUsername && newPassword) {
+                // Update the session storage with new credentials
+                sessionStorage.setItem('username', newUsername);
+                sessionStorage.setItem('password', newPassword);
+                
+                document.getElementById('changeStatusMessage').innerText = 'Username and password updated successfully!';
+            } else {
+                document.getElementById('changeStatusMessage').innerText = 'Please fill out both fields.';
+            }
+        });
+
+        // Function to generate a random 25-digit ID
+        function generateID() {
+            return Math.floor(Math.random() * 10000000000000000000000000000).toString();
+        }
+
+        // Handle data generation
+        document.getElementById('generateButton').addEventListener('click', function() {
+            const jobName = document.getElementById('jobName').value || "RandomJob";
+            const quantity = document.getElementById('quantity').value || 1;
+            const dataType = document.getElementById('dataType').value;
+            const customPattern = document.getElementById('customPattern').value;
+            const linkInput = document.getElementById('linkInput').value;
+            const digitLength = document.getElementById('digitLength').value || 6;
+
+            let generatedData = '';
+
+            switch (dataType) {
+                case 'digits':
+                    for (let i = 0; i < quantity; i++) {
+                        generatedData += Math.floor(Math.random() * Math.pow(10, digitLength)) + '\n';
+                    }
+                    break;
+                case 'string':
+                    generatedData = 'RandomString-' + generateID();
+                    break;
+                case 'alphanumeric':
+                    generatedData = 'A1B2C3D4E5'; // Example alphanumeric string
+                    break;
+                case 'link':
+                    generatedData = linkInput || 'http://example.com/' + generateID();
+                    break;
+                case 'customPattern':
+                    generatedData = customPattern.replace(/X/g, Math.floor(Math.random() * 10));
+                    break;
+                default:
+                    generatedData = 'Unknown data type';
+            }
+
+            // Display data in history and table
+            const timestamp = new Date().toLocaleString();
+            const table = document.getElementById('recordTable').getElementsByTagName('tbody')[0];
+            const row = table.insertRow();
+            row.insertCell(0).innerText = generateID();
+            row.insertCell(1).innerText = jobName;
+            row.insertCell(2).innerText = generatedData;
+            row.insertCell(3).innerText = timestamp;
+
+            // Update history textarea
+            const historyTextArea = document.getElementById('history');
+            historyTextArea.value += `Job: ${jobName}, Data: ${generatedData}, Timestamp: ${timestamp}\n`;
+
+            // Enable download button
+            document.getElementById('downloadButton').disabled = false;
+
+            // Show completion message
+            document.getElementById('completionMessage').classList.remove('hidden');
+        });
+
+        // Handle Excel file download
+        document.getElementById('downloadButton').addEventListener('click', function() {
+            const table = document.getElementById('recordTable');
+            const rows = table.getElementsByTagName('tr');
+            const data = [];
+            
+            Array.from(rows).forEach(function(row, rowIndex) {
+                const rowData = [];
+                const cells = row.querySelectorAll("td");
+
+                if (rowIndex == 0) {
+                    return; // Skip header row
+                }
+
+                cells.forEach(function(cell) {
+                    rowData.push(cell.innerText);
+                });
+
+                data.push(rowData);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Generated Data');
+            XLSX.writeFile(wb, 'generated_data.xlsx');
+        });
+
+        // Clear generated data and reset the table
+        document.getElementById('clearButton').addEventListener('click', function() {
+            document.getElementById('history').value = '';
+            document.getElementById('recordTable').getElementsByTagName('tbody')[0].innerHTML = '';
+            document.getElementById('completionMessage').classList.add('hidden');
+            document.getElementById('downloadButton').disabled = true;
+        });
+
+        // Handle email functionality (this is a placeholder for now)
+        document.getElementById('emailButton').addEventListener('click', function() {
+            const generatedData = document.getElementById('history').value;
+            if (generatedData) {
+                // Send email using EmailJS (replace with your actual email service)
+                emailjs.send("your_service_id", "your_template_id", {
+                    data: generatedData,
+                    to_email: "recipient@example.com"
+                })
+                .then(function(response) {
+                    alert('Email sent successfully!');
+                }, function(error) {
+                    alert('Failed to send email: ' + error);
+                });
+            }
+        });
+
+// Filter Jobs
+function filterJobs() {
+            const searchValue = document.getElementById('searchBar').value.toLowerCase();
+            const tableRows = document.querySelectorAll('#recordTable tbody tr');
+            tableRows.forEach(row => {
+                const jobName = row.cells[1]?.textContent.toLowerCase() || '';
+                row.style.display = jobName.includes(searchValue) ? '' : 'none';
+            });
+        }
+
+        // Display Current Date and Time
+        document.getElementById("DateTime").innerText = ` Date & Time: ${new Date().toLocaleString()}`;
+
+
+    </script>
+        <script src="scripts.js"></script>
+        <script src="server.js"></script>
+</body>
+</html>
